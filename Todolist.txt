@@ -1,6 +1,6 @@
 Todo:
-Optimize algorithm
-Make UI
+Optimize algorithm:
+Need to optimize first part of the dupe check. The check takes the images and dumps them into a hashtable with buckets, and there's no point to this because this table is reprocessed and it just increases runtime.
 
 Change list:
 ==================================================================
