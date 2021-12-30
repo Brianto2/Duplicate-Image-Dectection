@@ -53,26 +53,28 @@ def process_list(f, imgtable, dupelist):
     counter = 0
     for f_img in f:
         if os.path.isfile(f_img):
-            try:
-                img = Image.open(f_img)
-                # get the hash of the image
-                hash_of_img = str(imagehash.average_hash(img, 64))
-                # if key already exists then update the list at the given key
-                if imgtable.get(hash_of_img):
-                    olist = imgtable.get(hash_of_img)
-                    # create tuples of the new file with the old files to check duplicates for
-                    for x in olist:
-                        dupelist.append((x, f_img))
-                    # update the list in image table
-                    olist.append(f_img)
-                    imgtable.update({hash_of_img: olist})
-                else:
-                    imgtable.update({hash_of_img: [f_img]})
+            # Ignore gifs because resizing the images results in a still image. When this image is hashed it is a fp.
+            if not f_img.endswith("gif"):
+                try:
+                    img = Image.open(f_img)
+                    # get the hash of the image
+                    hash_of_img = str(imagehash.average_hash(img, 64))
+                    # if key already exists then update the list at the given key
+                    if imgtable.get(hash_of_img):
+                        olist = imgtable.get(hash_of_img)
+                        # create tuples of the new file with the old files to check duplicates for
+                        for x in olist:
+                            dupelist.append((x, f_img))
+                        # update the list in image table
+                        olist.append(f_img)
+                        imgtable.update({hash_of_img: olist})
+                    else:
+                        imgtable.update({hash_of_img: [f_img]})
 
-            # if the file is not a valid pil image file skip it
-            except UnidentifiedImageError:
-                print(f_img)
-                pass
+                # if the file is not a valid pil image file skip it
+                except UnidentifiedImageError:
+                    print("Invalid file extension :", f_img)
+                    pass
         counter += 1
     print("Processed: ", counter)
     return dupelist
