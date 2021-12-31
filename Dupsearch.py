@@ -17,18 +17,21 @@ import time
 def find_dupes(accuracy):
     start_time = time.time()
     imgtable = {}
-    dupelist = []
+    dupeset = set()
     # UI stuff, get the file location
     Tk().withdraw()  # hides ui since we only need the open folder ui
     root = askdirectory()  # opens folder ui
 
     f = get_dirs(root)
-    dupelist = process_list(f, imgtable, dupelist)
+    dupelist = process_list(f, imgtable, dupeset)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
     dupelist = recheck_d(accuracy, dupelist)
     print("---Total runtime %s seconds ---" % (time.time() - start_time))
+    for x, y in dupelist.items():
+        print(y)
+
     return dupelist
 
 
@@ -47,8 +50,8 @@ def get_dirs(root):
 # "Quickly" process list for duplicates, saves time in recheck_d
 # f: files
 # imgtable: dictionary of images using the image hash as a key and a list of images as values
-# dupelist: a list of tuples to compare in recheck_d
-def process_list(f, imgtable, dupelist):
+# dupeset: a set of file names to compare in recheck_d
+def process_list(f, imgtable, dupeset):
     print("Processing List, ", len(f), "items")
     counter = 0
     for f_img in f:
@@ -61,43 +64,53 @@ def process_list(f, imgtable, dupelist):
                     hash_of_img = str(imagehash.average_hash(img, 64))
                     # if key already exists then update the list at the given key
                     if imgtable.get(hash_of_img):
-                        olist = imgtable.get(hash_of_img)
-                        # create tuples of the new file with the old files to check duplicates for
-                        for x in olist:
-                            dupelist.append((x, f_img))
-                        # update the list in image table
-                        olist.append(f_img)
-                        imgtable.update({hash_of_img: olist})
+                        # Add the file names to dupeset, both the original and the new dupe
+                        dupeset.add(f_img)
+                        dupeset.add(imgtable.get(hash_of_img))
+
+                        # update hashes in imgtable
+                        imgtable.update({hash_of_img: f_img})
+
                     else:
-                        imgtable.update({hash_of_img: [f_img]})
+                        imgtable.update({hash_of_img: f_img})
 
                 # if the file is not a valid pil image file skip it
                 except UnidentifiedImageError:
-                    print("Invalid file extension :", f_img)
+                    # print("Invalid file extension :", f_img)
                     pass
         counter += 1
     print("Processed: ", counter)
-    return dupelist
+    return dupeset
 
 
 # Recheck using D-hash, more accurate than average hash while faster than phash at large size values
 # dupelist: list of duplicates to recheck
 def recheck_d(img_size, dupelist):
     # process dupes again with better accuracy
+    duplicates = {} #list to return
+    imgtable = {}
+
     print("Rechecking Duplicates: ", len(dupelist))
     newtime = time.time()
-    for x in list(dupelist):
-        hash1 = imagehash.dhash(Image.open(x[0]), img_size)
-        hash2 = imagehash.dhash(Image.open(x[1]), img_size)
 
-        if hash1 != hash2:
-            dupelist.remove(x)
+    for file_name in list(dupelist):
+        hash_of_img = imagehash.dhash(Image.open(file_name), img_size)
+
+        # if key already exists then update the list at the given key
+        if imgtable.get(hash_of_img):
+            if duplicates.get(hash_of_img):
+                x = duplicates.get(hash_of_img)
+                x.append(file_name)
+                duplicates.update({hash_of_img: x})
+            else:
+                duplicates.update({hash_of_img: [file_name, imgtable.get(hash_of_img)]})
+
         else:
-            print(x[1], "      ", x[0])
+            imgtable.update({hash_of_img: file_name})
 
-    print("Dupes found: ", len(dupelist))
+    print("Duplicates sets found: ", len(duplicates))
     print("---Run time: %s seconds ---" % (time.time() - newtime))
-    return dupelist
+    return duplicates
 
 
 # Move pairs to different folder
