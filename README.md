@@ -1,4 +1,6 @@
-## Duplicate-Image-Detection
+## Duplicate-Image-Detection (deprecated)
+Go use the MSE search instead, faster and more accurate.
+
 A python script that locates duplicate images without factoring size.
 
 ### Rationale
